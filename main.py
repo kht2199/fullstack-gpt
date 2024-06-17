@@ -1,23 +1,19 @@
-from typing import Any, Dict
-from fastapi import Body, FastAPI, Form, Request
-from fastapi.responses import HTMLResponse
-from pydantic import BaseModel, Field
-from dotenv import load_dotenv
-import pinecone
 import os
-from langchain.embeddings import OpenAIEmbeddings
-from langchain.vectorstores import Pinecone
+
+from dotenv import load_dotenv
+from fastapi import FastAPI, Form
+from fastapi.responses import HTMLResponse
+from langchain_community.embeddings import OpenAIEmbeddings
+from langchain_pinecone import PineconeVectorStore
+from pydantic import BaseModel
 
 load_dotenv()
 
-pinecone.init(
-    api_key=os.getenv("PINECONE_API_KEY"),
-    environment="gcp-starter",
-)
+os.environ['PINECONE_API_KEY'] = os.getenv("PINECONE_API_KEY")
 
 embeddings = OpenAIEmbeddings()
 
-vector_store = Pinecone.from_existing_index(
+vector_store = PineconeVectorStore(
     "recipes",
     embeddings,
 )

@@ -1,13 +1,16 @@
+import os
+
+import streamlit as st
+from langchain.callbacks.base import BaseCallbackHandler
+from langchain.embeddings import CacheBackedEmbeddings
 from langchain.prompts import ChatPromptTemplate
-from langchain.document_loaders import UnstructuredFileLoader
-from langchain.embeddings import CacheBackedEmbeddings, OpenAIEmbeddings
 from langchain.schema.runnable import RunnableLambda, RunnablePassthrough
 from langchain.storage import LocalFileStore
 from langchain.text_splitter import CharacterTextSplitter
-from langchain.vectorstores.faiss import FAISS
-from langchain.chat_models import ChatOpenAI
-from langchain.callbacks.base import BaseCallbackHandler
-import streamlit as st
+from langchain_community.document_loaders import UnstructuredFileLoader
+from langchain_community.embeddings import OpenAIEmbeddings
+from langchain_community.vectorstores import FAISS
+from langchain_openai import ChatOpenAI
 
 st.set_page_config(
     page_title="DocumentGPT",
@@ -38,10 +41,17 @@ llm = ChatOpenAI(
 )
 
 
-@st.cache_data(show_spinner="Embedding file...")
+@st.cache_resource(show_spinner="Embedding file...")
 def embed_file(file):
     file_content = file.read()
     file_path = f"./.cache/files/{file.name}"
+    # 디렉토리 경로 설정
+    directory = "./.cache/files/"
+
+    # 디렉토리가 존재하지 않으면 생성
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+
     with open(file_path, "wb") as f:
         f.write(file_content)
     cache_dir = LocalFileStore(f"./.cache/embeddings/{file.name}")
@@ -56,7 +66,13 @@ def embed_file(file):
     cached_embeddings = CacheBackedEmbeddings.from_bytes_store(embeddings, cache_dir)
     vectorstore = FAISS.from_documents(docs, cached_embeddings)
     retriever = vectorstore.as_retriever()
+    print_retriever_info(retriever)
     return retriever
+
+
+# retriever 객체의 속성을 출력하는 함수 예시
+def print_retriever_info(retriever):
+    print(f"Retriever: {retriever}")
 
 
 def save_message(message, role):
@@ -80,6 +96,8 @@ def paint_history():
 
 
 def format_docs(docs):
+    # docs 정보 출력
+    print(f"Docs: {docs}")
     return "\n\n".join(document.page_content for document in docs)
 
 
@@ -121,6 +139,7 @@ if file:
     send_message("I'm ready! Ask away!", "ai", save=False)
     paint_history()
     message = st.chat_input("Ask anything about your file...")
+
     if message:
         send_message(message, "human")
         chain = (
